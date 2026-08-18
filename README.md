@@ -114,3 +114,47 @@ MIT License
 
 ## Поддръжка
 За въпроси и докладване на проблеми, моля използвайте GitHub issues.
+
+---
+
+## ЛAYOUT PLAN
+
+### Desktop Login Screen
+- **Background**: High-contrast gradient from dark blue to black.
+- **Logo**: Positioned at the top center with a white background.
+- **Input Fields**: 
+  - **Email**: White text on a dark blue background.
+  - **Password**: White text on a dark blue background.
+- **Buttons**: 
+  - **Login**: High-contrast blue button with white text.
+  - **Forgot Password**: Link with high-contrast blue text.
+- **Footer**: 
+  - **Remember Me**: Checkbox with high-contrast blue text.
+  - **Sign Up**: Link with high-contrast blue text.
+
+### Maps
+- **Background**: High-contrast gradient from light gray to dark gray.
+- **Markers**: High-contrast red markers for incidents.
+- **Controls**: 
+  - **Zoom In/Out**: High-contrast blue buttons.
+  - **Legend**: Positioned at the bottom left with high-contrast text.
+- **Info Window**: 
+  - **Background**: White with a high-contrast blue border.
+  - **Text**: High-contrast black text.
+
+### Admin Dashboard
+- **Background**: High-contrast gradient from light gray to dark gray.
+- **Sidebar**: 
+  - **Menu Items**: High-contrast blue text on a dark gray background.
+  - **Active Item**: Highlighted with a high-contrast blue border.
+- **Main Content**: 
+  - **Headers**: High-contrast blue text.
+  - **Tables**: 
+    - **Headers**: High-contrast blue text.
+    - **Rows**: Alternating light and dark gray rows.
+  - **Buttons**: 
+    - **Primary**: High-contrast blue button with white text.
+    - **Secondary**: High-contrast gray button with black text.
+- **Footer**: 
+  - **Logout**: High-contrast blue button with white text.
+  - **Help**: Link with high-contrast blue text.

@@ -1,0 +1,681 @@
+/* SOS Animal — Admin Command Center */
+.adminPanel {
+  --adm-bg: #FFFFFF;
+  --adm-surface: #F0FDF4;
+  --adm-border: #1A2A2A;
+  --adm-text: #0F172A;
+  --adm-muted: #334155;
+  --adm-accent: #ADFF2F;
+  --adm-header: #1A2A2A;
+  --adm-shadow: 0 12px 40px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(26, 42, 42, 0.12);
+  position: fixed;
+  top: 88px;
+  left: max(16px, calc(50vw - 275px));
+  width: 550px;
+  height: 650px;
+  max-height: 650px;
+  min-height: 650px;
+  display: flex;
+  flex-direction: column;
+  background: var(--adm-bg);
+  border: 2px solid var(--adm-border);
+  border-radius: 16px;
+  box-shadow: var(--adm-shadow);
+  z-index: 2000;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.96);
+  transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+  resize: both;
+  min-width: 360px;
+}
+
+.adminPanel.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.adminPanel.dragging {
+  transition: none !important;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
+  cursor: grabbing;
+}
+
+.adminPanel.minimized .adminPanelBody {
+  display: none;
+}
+
+.adminPanel.minimized {
+  height: auto !important;
+  min-height: auto !important;
+}
+
+.adminPanel.maximized {
+  width: 90vw !important;
+  height: 80vh !important;
+  max-height: 80vh !important;
+  min-height: 80vh !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.adminPanelHeader {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--adm-header);
+  color: #FFFFFF;
+  flex-shrink: 0;
+  touch-action: none;
+}
+
+.admin-drag-handle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: grab;
+  user-select: none;
+  min-width: 0;
+  flex: 1;
+}
+
+.adminPanel.dragging .admin-drag-handle {
+  cursor: grabbing;
+}
+
+.admin-drag-grip {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+}
+
+.adminPanelTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adminPanelTitle i {
+  color: var(--adm-accent);
+  margin-right: 0.35rem;
+}
+
+.adminHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.adminWinBtn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.adminWinBtn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.adminWinBtn:active {
+  transform: scale(0.94);
+}
+
+.adminWinBtn.close:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+/* Stats bar */
+.adminStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--adm-surface);
+  border-bottom: 2px solid var(--adm-border);
+}
+
+.adminStatCard {
+  background: #FFFFFF;
+  border: 2px solid var(--adm-border);
+  border-radius: 10px;
+  padding: 0.5rem 0.4rem;
+  text-align: center;
+}
+
+.adminStatCard .num {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--adm-text);
+  line-height: 1.1;
+}
+
+.adminStatCard .lbl {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--adm-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.adminStatCard.highlight .num {
+  color: #B45309;
+}
+
+/* Toolbar */
+.adminToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid #CBD5E1;
+  background: #FFFFFF;
+}
+
+.adminSearchWrap {
+  flex: 1;
+  min-width: 140px;
+  position: relative;
+}
+
+.adminSearchWrap i {
+  position: absolute;
+  left: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--adm-muted);
+  font-size: 0.8rem;
+}
+
+.adminSearch {
+  width: 100%;
+  padding: 0.55rem 0.65rem 0.55rem 2rem;
+  border: 2px solid var(--adm-border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--adm-text);
+  background: #FFFFFF;
+}
+
+.adminSearch::placeholder {
+  color: #64748B;
+  opacity: 1;
+}
+
+.adminSearch:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(173, 255, 47, 0.35);
+}
+
+.adminToolbar select {
+  padding: 0.55rem 0.65rem;
+  border: 2px solid var(--adm-border);
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--adm-text);
+  background: #FFFFFF;
+  cursor: pointer;
+}
+
+.adminChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0 0.75rem 0.65rem;
+}
+
+.adminChip {
+  padding: 0.3rem 0.65rem;
+  border: 2px solid var(--adm-border);
+  border-radius: 999px;
+  background: #FFFFFF;
+  color: var(--adm-text);
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.adminChip:hover {
+  background: var(--adm-surface);
+}
+
+.adminChip.active {
+  background: var(--adm-accent);
+  color: #000000;
+  border-color: var(--adm-border);
+}
+
+/* Tabs */
+.adminTabs {
+  display: flex;
+  border-bottom: 2px solid var(--adm-border);
+  background: #F8FAFC;
+}
+
+.adminTab {
+  flex: 1;
+  padding: 0.6rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--adm-muted);
+  font-weight: 800;
+  font-size: 0.78rem;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.adminTab:hover {
+  color: var(--adm-text);
+  background: rgba(173, 255, 47, 0.15);
+}
+
+.adminTab.active {
+  color: var(--adm-text);
+  border-bottom-color: var(--adm-accent);
+  background: #FFFFFF;
+}
+
+.adminPanelBody {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.adminView {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.adminView.active {
+  display: flex;
+}
+
+.adminListScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+  min-height: 180px;
+}
+
+.adminListScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.adminListScroll::-webkit-scrollbar-thumb {
+  background: #94A3B8;
+  border-radius: 4px;
+}
+
+/* Incident cards */
+.adminIncidentCard {
+  background: var(--adm-surface);
+  border: 2px solid var(--adm-border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+}
+
+.adminIncidentCard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+  border-color: #059669;
+}
+
+.adminIncidentCard.selected {
+  border-color: #059669;
+  background: #DCFCE7;
+  box-shadow: 0 0 0 2px rgba(173, 255, 47, 0.5);
+}
+
+.adminCardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.adminCardTitle {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--adm-text);
+}
+
+.adminBadge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #000000;
+  white-space: nowrap;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.adminCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--adm-muted);
+  margin-bottom: 0.5rem;
+}
+
+.adminCardMeta i {
+  color: var(--adm-text);
+  margin-right: 0.2rem;
+}
+
+.adminCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.adminCardBtn {
+  padding: 0.35rem 0.55rem;
+  border: 2px solid var(--adm-border);
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: var(--adm-text);
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: background 0.12s;
+}
+
+.adminCardBtn:hover {
+  background: var(--adm-accent);
+}
+
+.adminCardBtn.primary {
+  background: var(--adm-accent);
+}
+
+.adminQuickStatus {
+  padding: 0.3rem 0.4rem;
+  border: 2px solid var(--adm-border);
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #FFFFFF;
+  color: var(--adm-text);
+  cursor: pointer;
+}
+
+/* Detail view */
+.adminDetailScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+}
+
+.adminDetailHero {
+  background: var(--adm-surface);
+  border: 2px solid var(--adm-border);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.adminDetailHero h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--adm-text);
+}
+
+.adminDetailGrid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.adminDetailRow {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--adm-text);
+  font-weight: 600;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.adminDetailRow:last-child {
+  border-bottom: none;
+}
+
+.adminDetailRow strong {
+  min-width: 110px;
+  color: var(--adm-muted);
+  font-weight: 800;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.adminActionBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border-top: 2px solid var(--adm-border);
+  background: #F8FAFC;
+}
+
+.adminBtn {
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: 2px solid var(--adm-border);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: transform 0.12s, background 0.12s;
+}
+
+.adminBtn:active {
+  transform: scale(0.97);
+}
+
+.adminBtn.lime {
+  background: var(--adm-accent);
+  color: #000000;
+}
+
+.adminBtn.lime:hover {
+  background: #9AEF1C;
+}
+
+.adminBtn.ghost {
+  background: #FFFFFF;
+  color: var(--adm-text);
+}
+
+.adminBtn.ghost:hover {
+  background: var(--adm-surface);
+}
+
+.adminBtn.danger {
+  background: #FEE2E2;
+  color: #991B1B;
+  border-color: #991B1B;
+}
+
+.adminBtn.danger:hover {
+  background: #ef4444;
+  color: #FFFFFF;
+}
+
+.adminSelect,
+.adminTextarea {
+  width: 100%;
+  padding: 0.65rem;
+  border: 2px solid var(--adm-border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--adm-text);
+  background: #FFFFFF;
+  margin-bottom: 0.5rem;
+}
+
+.adminTextarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.adminFieldLabel {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--adm-muted);
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.04em;
+}
+
+.adminNotesBox {
+  background: #FFFFFF;
+  border: 2px dashed #94A3B8;
+  border-radius: 10px;
+  padding: 0.65rem;
+  font-size: 0.85rem;
+  color: var(--adm-text);
+  font-weight: 600;
+  margin-top: 0.35rem;
+}
+
+.adminPhoto {
+  max-width: 100%;
+  border-radius: 10px;
+  border: 2px solid var(--adm-border);
+  margin-top: 0.5rem;
+}
+
+.adminEmpty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--adm-muted);
+  font-weight: 700;
+}
+
+.adminEmpty i {
+  font-size: 2rem;
+  color: var(--adm-text);
+  opacity: 0.35;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.adminFooterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--adm-muted);
+  border-top: 1px solid #E2E8F0;
+  background: #F8FAFC;
+}
+
+.adminAutoRefresh {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  color: var(--adm-text);
+}
+
+.adminAutoRefresh input {
+  accent-color: #059669;
+}
+
+.adminLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: var(--adm-text);
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .adminPanel {
+    width: calc(100vw - 16px);
+    left: 8px !important;
+    top: 72px !important;
+    max-height: 75vh;
+  }
+
+  .adminPanel,
+  .adminPanel.visible {
+    transform: none !important;
+  }
+
+  .adminStats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .adminPanel {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    max-height: 90vh !important;
+    height: 90vh !important;
+  }
+  
+  .adminPanelContent {
+    overflow-y: auto;
+  }
+  
+  .window-close-btn {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 1.25rem !important;
+  }
+}

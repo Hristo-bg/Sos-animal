@@ -1,0 +1,108 @@
+/* RoadGuardian V2 Dashboard Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Map Container */
+#map {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  background: #1a1a1a;
+}
+
+/* Status Widget Colors */
+.status-ok { color: #10b981; }
+.status-error { color: #ef4444; }
+.status-warning { color: #f59e0b; }
+
+/* Incident Cards */
+.incident-card {
+  @apply bg-gray-700 rounded-lg p-3 cursor-pointer transition-all hover:bg-gray-600 border border-transparent hover:border-blue-500;
+}
+
+.incident-card.selected {
+  @apply bg-gray-600 border-blue-500;
+}
+
+.incident-status {
+  @apply inline-block px-2 py-1 rounded text-xs font-medium;
+}
+
+.status-unclaimed { @apply bg-yellow-600 text-yellow-100; }
+.status-claimed { @apply bg-blue-600 text-blue-100; }
+.status-handled { @apply bg-green-600 text-green-100; }
+.status-verified { @apply bg-purple-600 text-purple-100; }
+
+.severity-low { @apply bg-gray-600 text-gray-200; }
+.severity-medium { @apply bg-orange-600 text-orange-100; }
+.severity-high { @apply bg-red-600 text-red-100; }
+.severity-emergency { @apply bg-red-700 text-red-100 animate-pulse; }
+
+.urgency-dead { @apply bg-gray-800 text-gray-300; }
+.urgency-wounded { @apply bg-red-600 text-red-100; }
+.urgency-trapped { @apply bg-orange-600 text-orange-100; }
+
+/* Heatmap Toggle */
+.heatmap-active {
+  @apply bg-blue-700;
+}
+
+/* Modal Animations */
+.modal-enter {
+  animation: modalEnter 0.2s ease-out;
+}
+
+.modal-leave {
+  animation: modalLeave 0.2s ease-in;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes modalLeave {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* Loading States */
+.loading-spinner {
+  @apply inline-block w-4 h-4 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin;
+}
+
+/* Export Dropdown */
+.export-dropdown {
+  @apply absolute top-full mt-1 right-0 bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden z-10;
+}
+
+.export-dropdown button {
+  @apply block w-full text-left px-4 py-2 hover:bg-gray-700 text-sm transition;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .flex {
+    flex-direction: column;
+  }
+  
+  .w-96 {
+    width: 100%;
+    max-height: 50vh;
+  }
+}

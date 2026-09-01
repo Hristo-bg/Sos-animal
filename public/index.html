@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOS Animal - Wildlife Protection System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="icon" type="image/png" href="./icon.png">
+  <link rel="shortcut icon" type="image/png" href="./icon.png">
+</head>
+<body>
+  <!-- Sticky Navigation -->
+  <header class="navbar">
+    <div class="brand">
+      <img src="./icon.png" alt="SOS Animal Logo" class="brand-logo" />
+      <span>SOS Animal</span>
+    </div>
+    <nav class="nav-links">
+      <a href="#hero" data-i18n="home">Начало</a>
+      
+      <a href="#map" data-i18n="map">Карта</a>
+      <a href="#contacts" data-i18n="contacts">Контакти</a>
+      <button id="btnLangToggle" class="btn btnSecondary lang-toggle">
+        <i class="fas fa-globe"></i>
+        <span id="currentLang">BG</span>
+      </button>
+      <button id="btnLogin" class="btn btnSecondary" data-i18n="login">Вход</button>
+    </nav>
+    <button id="btnMobileMenu" class="iconBtn" aria-label="Menu">☰</button>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="hero" class="hero">
+    <div class="hero-content">
+      <div class="hero-logo-container">
+        <img src="./icon.png" alt="SOS Animal" class="hero-logo" />
+      </div>
+      <h1 data-i18n="title">SOS Animal</h1>
+            
+      <!-- Feature Cards -->
+      <div class="feature-cards">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-phone-alt"></i>
+          </div>
+          <h3 data-i18n="emergencyCall">Emergency call</h3>
+          <p data-i18n="emergencyDesc">Quick access to emergency services for wildlife rescue</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-map-marked-alt"></i>
+          </div>
+          <h3 data-i18n="mapTrack">Map track</h3>
+          <p data-i18n="mapDesc">Real-time tracking of wildlife incidents across Bulgaria</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-hand-holding-heart"></i>
+          </div>
+          <h3 data-i18n="professionalCleanup">Professional cleanup</h3>
+          <p data-i18n="cleanupDesc">Coordinated response for safe animal removal</p>
+        </div>
+      </div>
+      
+      <div class="hero-actions">
+        <button id="btnTakeLook" class="btn btnPrimary" data-i18n="takeLook">
+          <i class="fas fa-map-marked-alt"></i>
+          <span data-i18n-text="takeLook">Take Look</span>
+        </button>
+        <button id="btnJoinMission" class="btn btnOutline" data-i18n="joinMission">
+          <i class="fas fa-paw"></i>
+          <span data-i18n-text="joinMission">Join Mission</span>
+        </button>
+      </div>
+    </div>
+    <button class="scrollIndicator" type="button" aria-label="Скрол надолу">
+      <i class="fas fa-chevron-down"></i>
+    </button>
+  </section>
+
+  <!-- Map Section (Guest View) -->
+  <section id="map" class="map-section">
+    <div class="map-header">
+      <h2>Карта на инциденти</h2>
+      <p>Публичен изглед на докладвани инциденти.</p>
+      <button id="btnAddSignal" class="btn btnPrimary" style="display:none;">Добави сигнал</button>
+    </div>
+    <div id="mapCanvas"></div>
+  
+  <!-- Floating instruction for reporters -->
+  <div class="map-instruction" id="mapInstruction">
+    <i class="fas fa-hand-pointer"></i>
+    Кликни някъде върху картата, за да маркираш инцидент
+  </div>
+  </section>
+
+  <!-- Contacts Section -->
+  <section id="contacts" class="contacts">
+    <div class="container">
+      <h2>Спешни контакти</h2>
+      <div class="accordion">
+        <div class="accordion-item">
+          <button class="accordion-header">
+            <i class="fas fa-phone-alt"></i> Спешна помощ (112)
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="accordion-body">
+            <p>Национален номер за спешни случаи.</p>
+            <a href="tel:112" class="btn btnPrimary">Обади сега</a>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <button class="accordion-header">
+            <i class="fas fa-shield-alt"></i> БАБХ
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="accordion-body">
+            <p>+359 2 923 58 58</p>
+            <a href="tel:+35929235858" class="btn btnPrimary">Обади сега</a>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <button class="accordion-header">
+            <i class="fas fa-road"></i> СДВР / КАТ
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="accordion-body">
+            <p>+359 2 980 52 00</p>
+            <a href="tel:+35929805200" class="btn btnPrimary">Обади сега</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Report Panel (hidden by default) -->
+  <div class="reportPanel hidden" id="reportPanel">
+    <div class="authHeader">
+        <div class="auth-logo">
+          <img src="./icon.png" alt="SOS Animal" />
+        </div>
+        <h2 id="reportTitle">Подаване на сигнал</h2>
+        <button id="reportClose" class="iconBtn">×</button>
+      </div>
+    <div class="panelBody">
+      <label class="field">
+        <div class="fieldLabel">Вид</div>
+        <input id="reportSpecies" class="input" placeholder="напр. Лисица" />
+      </label>
+      <label class="field">
+        <div class="fieldLabel">Статус</div>
+        <select id="reportStatus" class="input">
+          <option value="ранено">Ранено</option>
+          <option value="умряло">Умряло</option>
+          <option value="изчистено">Изчистено</option>
+        </select>
+      </label>
+      <label class="field">
+        <div class="fieldLabel">Снимка (по желание)</div>
+        <input id="reportPhoto" type="file" accept="image/*" class="input" />
+      </label>
+      <input type="hidden" id="reportLat" name="lat" />
+      <input type="hidden" id="reportLng" name="lng" />
+      <button id="btnSubmitReport" class="btn btnWide">Изпрати</button>
+      <div class="reportError" id="reportError"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <img src="./icon.png" alt="SOS Animal" class="footer-logo" />
+        <div class="footer-text">
+          <p>&copy; 2025 SOS Animal. Wildlife Protection System.</p>
+          <p class="footer-rights">All rights reserved.</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Auth Modal -->
+  <div class="authOverlay hidden" id="authOverlay" aria-hidden="true">
+    <div class="authCard" id="authCard" role="dialog" aria-label="Authentication">
+      <div class="authHeader">
+        <div class="authTitle">Пътен Пазител</div>
+        <button class="authClose" id="authClose" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="authBody">
+        <label class="floatField">
+          <input id="authEmail" type="email" class="floatInput" placeholder=" " autocomplete="email" />
+          <span class="floatLabel">Имейл</span>
+        </label>
+        <label class="floatField">
+          <input id="authPassword" type="password" class="floatInput" placeholder=" " autocomplete="current-password" />
+          <span class="floatLabel">Парола</span>
+        </label>
+        <label id="rememberMeContainer" style="display:flex;align-items:center;gap:0.5rem;margin:0.75rem 0;font-size:0.85rem;color:#94a3b8;">
+          <input type="checkbox" id="rememberMe" style="margin:0;">
+          <span>Запомни ме</span>
+        </label>
+        <div id="registerExtras" style="display:none;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0 0.5rem;">
+            <div>
+              <h4 style="margin:0 0 0.5rem;font-size:0.95rem;color:#f8fafc;">
+                <i class="fas fa-gift" style="color:#fbbf24;margin-right:0.5rem;"></i>Какво получаваш?
+              </h4>
+              <ul style="margin:0;padding-left:1.2rem;font-size:0.85rem;color:#94a3b8;">
+                <li>✅ Право да маркираш обекти</li>
+                <li>✅ Директна връзка с екипите</li>
+                <li>✅ История на приносите ти</li>
+                <li>✅ Приоритетна поддръжка</li>
+              </ul>
+            </div>
+            <div>
+              <h4 style="margin:0 0 0.5rem;font-size:0.95rem;color:#f8fafc;">
+                <i class="fas fa-shield-alt" style="color:#10b981;margin-right:0.5rem;"></i>Отговорности
+              </h4>
+              <ul style="margin:0;padding-left:1.2rem;font-size:0.85rem;color:#94a3b8;">
+                <li>✅ Точна информация</li>
+                <li>✅ Бързо реагиране</li>
+                <li>✅ Спазване на правилата</li>
+                <li>✅ Помощ на общността</li>
+              </ul>
+            </div>
+          </div>
+          <label class="floatField" style="margin-top:1rem;">
+            <input id="authPasswordConfirm" type="password" class="floatInput" placeholder=" " autocomplete="new-password" />
+            <span class="floatLabel">Потвърди парола</span>
+          </label>
+          <label style="display:flex;align-items:start;gap:0.6rem;font-size:0.85rem;color:#94a3b8;margin-top:1rem;">
+            <input type="checkbox" id="gdprConsent" style="margin-top:0.1rem;" required>
+            <span><i class="fas fa-lock" style="color:#fbbf24;margin-right:0.3rem;"></i>Съгласявам се моите данни да бъдат използвани за контакт при уточняване на сигнала.</span>
+          </label>
+        </div>
+        <div class="authError" id="authError"></div>
+        <button id="btnAuthSubmit" class="btn btnWide" type="button">Вход</button>
+        <button id="btnToggleAuthMode" class="linkBtn" type="button">Нужен акаунт? Регистрация</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+  <script src="./app.js"></script>
+</body>
+</html>
+
+  <!-- Scroll to Top Button -->
+  <button class="scrollToTop" id="scrollToTop" aria-label="Scroll to top">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+
+  <!-- Admin Panel -->
+  <div class="adminPanel" id="adminPanel">
+    <div class="adminPanelHeader">
+      <div class="adminPanelControls">
+        <div class="windowControl minimize" title="Минимизирай"></div>
+        <div class="windowControl maximize" title="Максимизирай"></div>
+      </div>
+      <h3><i class="fas fa-shield-alt"></i> Admin Panel</h3>
+      <button class="btnCloseAdmin" id="btnCloseAdmin">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="adminPanelContent">
+      <!-- Incidents List View -->
+      <div class="incidentsList" id="incidentsList">
+        <div class="listHeader">
+          <h4><i class="fas fa-list"></i> Всички инциденти</h4>
+          <div class="listControls">
+            <button class="btn btnSm btnSecondary" id="btnRefreshList">
+              <i class="fas fa-sync"></i> Опресни
+            </button>
+            <select id="filterStatus" class="filterSelect">
+              <option value="">Всички статуси</option>
+              <option value="wounded">Ранено</option>
+              <option value="deceased">Умряло</option>
+              <option value="investigating">Разследва се</option>
+              <option value="treated">Лекувано</option>
+              <option value="released">Освободено</option>
+              <option value="verified">Потвърдено</option>
+              <option value="archived">Архивирано</option>
+            </select>
+          </div>
+        </div>
+        <div class="incidentsContainer" id="incidentsContainer">
+          <div class="loadingMessage">Зареждане на инциденти...</div>
+        </div>
+      </div>
+
+      <!-- Incident Details View (Hidden by default) -->
+      <div class="incidentDetailsView" id="incidentDetailsView" style="display: none;">
+        <div class="detailsHeader">
+          <button class="btn btnSm btnSecondary" id="btnBackToList">
+            <i class="fas fa-arrow-left"></i> Обратно към списъка
+          </button>
+          <h4><i class="fas fa-info-circle"></i> Детайли на инцидент</h4>
+        </div>
+        <div class="incidentDetails" id="incidentDetails">
+          <div class="detailLoading">Зареждане...</div>
+        </div>
+        <div class="adminActions" id="adminActions">
+          <h4><i class="fas fa-tools"></i> Админ действия</h4>
+          <div class="actionGroup">
+            <label>Статус:</label>
+            <select id="statusSelect" class="adminSelect">
+              <option value="wounded">Ранено</option>
+              <option value="deceased">Умряло</option>
+              <option value="investigating">Разследва се</option>
+              <option value="treated">Лекувано</option>
+              <option value="released">Освободено</option>
+              <option value="verified">Потвърдено</option>
+              <option value="archived">Архивирано</option>
+            </select>
+            <button class="btn btnPrimary btn-sm" id="btnUpdateStatus">
+              <i class="fas fa-check"></i> Обнови статус
+            </button>
+          </div>
+          <div class="actionGroup">
+            <label>Бележки:</label>
+            <textarea id="adminNotes" class="adminTextarea" placeholder="Добавете админ бележки..."></textarea>
+            <button class="btn btnPrimary btn-sm" id="btnSaveNotes">
+              <i class="fas fa-save"></i> Запази бележки
+            </button>
+          </div>
+          <div class="actionGroup danger">
+            <button class="btn btnDanger" id="btnDeleteIncident">
+              <i class="fas fa-trash-alt"></i> Изтрий инцидент
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll to Top Button -->
+  <div class="scroll-to-top" id="scrollToTop">
+    <i class="fas fa-arrow-up"></i>
+  </div>
+</body>
+</html>

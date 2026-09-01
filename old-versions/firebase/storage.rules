@@ -1,0 +1,43 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+    
+    function isOrganization() {
+      return isAuthenticated() && request.auth.token.role == 'organization';
+    }
+    
+    function isReporter() {
+      return isAuthenticated() && request.auth.token.role == 'reporter';
+    }
+    
+    // Incident photos - structured as incidents/{incidentId}/photos/{photoId}
+    match /incidents/{incidentId}/photos/{photoId} {
+      // Upload rules
+      allow write: if (isReporter() || isOrganization() || isAdmin()) &&
+                   request.resource.size < 5 * 1024 * 1024 && // 5MB limit
+                   request.resource.contentType.matches('image/.*');
+      
+      // Download rules - based on incident access
+      allow read: if isAdmin() || 
+                  (isOrganization() && resource.parent.parent.data.handlerId == request.auth.uid) ||
+                  (isReporter() && resource.parent.parent.data.reporterId == request.auth.uid);
+    }
+    
+    // User avatars
+    match /users/{userId}/avatar/{avatarId} {
+      allow write: if isAuthenticated() && userId == request.auth.uid &&
+                   request.resource.size < 2 * 1024 * 1024 && // 2MB limit
+                   request.resource.contentType.matches('image/.*');
+      
+      allow read: if isAuthenticated();
+    }
+  }
+}

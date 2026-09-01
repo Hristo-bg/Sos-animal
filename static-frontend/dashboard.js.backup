@@ -1,0 +1,842 @@
+(() => {
+  // Security Guard
+  const token = localStorage.getItem('roadguardian_token');
+  const user = JSON.parse(localStorage.getItem('roadguardian_user') || '{}');
+  
+  console.log('Dashboard: User data:', user);
+  console.log('Dashboard: User role:', user.role);
+  console.log('Dashboard: Token exists:', !!token);
+  
+  if (!token || !user.email) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  // API config
+  const API_BASE = 'http://localhost:3333/api';
+
+  // Toast
+  function showToast(msg, isError = false) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${isError ? 'error' : 'success'}`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  // Show admin panel for admin users
+  console.log('Dashboard: Checking admin role, user.role =', user.role);
+  if (user.role === 'admin') {
+    const adminBtn = document.getElementById('btnAdminPanel');
+    if (adminBtn) {
+      adminBtn.style.display = 'block';
+      console.log('Dashboard: Admin button shown for user:', user.email);
+      showToast('Admin panel access enabled', false);
+    } else {
+      console.error('Dashboard: Admin panel button not found');
+    }
+  } else {
+    console.log('Dashboard: User is not admin, button hidden');
+    showToast(`Access denied. Current role: ${user.role || 'unknown'}. Admin role required.`, true);
+  }
+
+  // Logout
+  document.getElementById('btnLogout').addEventListener('click', () => {
+    localStorage.removeItem('roadguardian_token');
+    localStorage.removeItem('roadguardian_user');
+    window.location.href = 'index.html';
+  });
+
+  // Map
+  let map, markersLayer, tempMarker;
+  let pendingLat, pendingLng;
+
+  function initMap() {
+    console.log('Dashboard: Initializing map...');
+    console.log('Dashboard: window.L exists:', !!window.L);
+    
+    if (!window.L) {
+      console.error('Dashboard: Leaflet not loaded');
+      return;
+    }
+    
+    const mapContainer = document.getElementById('mapCanvas');
+    console.log('Dashboard: Map container found:', !!mapContainer);
+    
+    if (!mapContainer) {
+      console.error('Dashboard: Map container not found');
+      return;
+    }
+    
+    // Check container dimensions
+    const rect = mapContainer.getBoundingClientRect();
+    console.log('Dashboard: Map container dimensions:', rect.width, 'x', rect.height);
+    console.log('Dashboard: Map container computed style:', window.getComputedStyle(mapContainer).height);
+    
+    if (rect.width === 0 || rect.height === 0) {
+      console.error('Dashboard: Map container has zero dimensions');
+      // Force dimensions
+      mapContainer.style.width = '100%';
+      mapContainer.style.height = '100vh';
+      console.log('Dashboard: Forced dimensions applied');
+      setTimeout(() => initMap(), 500);
+      return;
+    }
+    
+    map = window.L.map('mapCanvas', { zoomControl: true }).setView([42.7339, 25.4858], 7);
+    const tiles = window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    });
+    tiles.addTo(map);
+    
+    // Add error handling for tile loading
+    tiles.on('tileerror', (e) => {
+      console.error('Dashboard: Tile loading error:', e);
+    });
+    
+    tiles.on('tileload', (e) => {
+      console.log('Dashboard: Tile loaded successfully');
+    });
+    
+    markersLayer = window.L.layerGroup().addTo(map);
+    
+    // Force map to render
+    setTimeout(() => {
+      map.invalidateSize();
+      console.log('Dashboard: Map size invalidated');
+      
+      // Check container dimensions
+      const rect = mapContainer.getBoundingClientRect();
+      console.log('Dashboard: Map container dimensions:', rect.width, 'x', rect.height);
+    }, 500);
+
+    // Bulgaria bounds
+    const bounds = [[41.0, 22.0], [44.5, 29.0]];
+    map.setMaxBounds(bounds);
+    map.setMinZoom(6);
+    map.setMaxZoom(18);
+    map.options.worldCopyJump = false;
+    map.on('drag', () => {
+      if (!bounds.contains(map.getBounds().getSouthWest())) {
+        map.panInsideBounds(bounds, { animate: false });
+      }
+    });
+
+    // Click to place marker
+    map.on('click', (e) => {
+      const { lat, lng } = e.latlng;
+      pendingLat = lat;
+      pendingLng = lng;
+      if (tempMarker) tempMarker.remove();
+      const icon = window.L.divIcon({
+        html: '<i class="fas fa-paw" style="color:#f59e0b;font-size:20px;"></i>',
+        iconSize: [20, 20],
+        className: ''
+      });
+      tempMarker = window.L.marker([lat, lng], { icon }).addTo(map);
+    });
+
+    fetchMyIncidents();
+    
+    // Load all incidents for admin users
+    if (user.role === 'admin') {
+      fetchAllIncidents();
+    }
+
+    // Force map to render properly
+    setTimeout(() => {
+      map.invalidateSize();
+      console.log('Dashboard: Map size invalidated, forcing re-render');
+    }, 500);
+  }
+
+  // Submit incident
+  document.getElementById('btnSubmit').addEventListener('click', async () => {
+    const species = document.getElementById('species').value.trim();
+    const status = document.getElementById('status').value;
+    const description = document.getElementById('description').value.trim();
+    const contact = document.getElementById('contact').value.trim();
+    const photo = document.getElementById('photo').files[0];
+    const errEl = document.getElementById('formError');
+    errEl.textContent = '';
+
+    if (!species) {
+      errEl.textContent = 'Моля, въведете вид животно.';
+      return;
+    }
+    if (!pendingLat || !pendingLng) {
+      errEl.textContent = 'Моля, кликнете върху картата, за да маркирате място.';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('lat', pendingLat);
+    formData.append('lng', pendingLng);
+    formData.append('species', species);
+    formData.append('status', status);
+    formData.append('description', description);
+    formData.append('contact', contact);
+    if (photo) formData.append('photo', photo);
+
+    try {
+      const res = await fetch(`${API_BASE}/incidents`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data?.code === 'DB_OFFLINE') throw new Error('Базата данни не е активна.');
+        throw new Error(data?.message || data?.error || 'Грешка при изпращане.');
+      }
+      showToast('Сигналът е изпратен успешно!');
+      // Reset form
+      document.getElementById('species').value = '';
+      document.getElementById('description').value = '';
+      document.getElementById('contact').value = '';
+      document.getElementById('photo').value = '';
+      if (tempMarker) { tempMarker.remove(); tempMarker = null; }
+      fetchMyIncidents();
+    } catch (e) {
+      errEl.textContent = e.message;
+    }
+  });
+
+  // Fetch my incidents
+  async function fetchMyIncidents() {
+    try {
+      const res = await fetch(`${API_BASE}/incidents/my`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const incidents = await res.json();
+      if (!res.ok) throw new Error('Грешка при зареждане на сигналите.');
+      renderMyIncidents(incidents);
+    } catch (e) {
+      console.error('Fetch my incidents error:', e);
+      document.getElementById('myIncidentsList').innerHTML = '<p>Грешка при зареждане.</p>';
+    }
+  }
+
+  function renderMyIncidents(items) {
+    const list = document.getElementById('myIncidentsList');
+    if (!items.length) {
+      list.innerHTML = '<p>Все още няма подадени сигнали.</p>';
+      return;
+    }
+    list.innerHTML = items.map(i => `
+      <div class="incidentItem">
+        <strong>${escapeHtml(i.species || 'Непознато')}</strong>
+        <div class="status ${escapeHtml(i.status)}">${i.status}</div>
+        ${i.description ? `<p>${escapeHtml(i.description)}</p>` : ''}
+        ${i.contact ? `<small>Телефон: ${escapeHtml(i.contact)}</small>` : ''}
+        <small>${new Date(i.created_at).toLocaleString('bg-BG')}</small>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  // Function to fetch all incidents for map (admin only)
+  async function fetchAllIncidents() {
+    try {
+      const res = await fetch(`${API_BASE}/incidents`);
+      const incidents = await res.json();
+      
+      incidents.forEach(incident => {
+        const colorMap = {
+          deceased: '#ef4444',
+          wounded: '#fbbf24',
+          investigating: '#f59e0b',
+          treated: '#3b82f6',
+          released: '#10b981',
+          verified: '#8b5cf6',
+          archived: '#6b7280'
+        };
+        
+        const iconHtml = `<i class="fas fa-paw" style="color:${colorMap[incident.status] || '#22c55e'};font-size:20px;"></i>`;
+        const icon = window.L.divIcon({
+          html: iconHtml,
+          iconSize: [20, 20],
+        });
+        
+        const marker = window.L.marker([incident.lat, incident.lng], { icon });
+        marker.__incident = incident;
+        
+        // Add click event for admin panel
+        marker.on('click', () => {
+          showAdminPanel();
+          loadIncidentDetails(incident.id);
+        });
+        
+        marker.addTo(markersLayer);
+      });
+    } catch (err) {
+      console.error('Error fetching all incidents:', err);
+    }
+  }
+
+  // Admin Panel functionality (only for admin users)
+  if (user.role === 'admin') {
+    let selectedIncidentId = null;
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    // Admin panel elements
+    const adminPanel = document.getElementById('adminPanel');
+    const btnCloseAdmin = document.getElementById('btnCloseAdmin');
+    const btnAdminPanel = document.getElementById('btnAdminPanel');
+    const incidentDetails = document.getElementById('incidentDetails');
+    const statusSelect = document.getElementById('statusSelect');
+    const adminNotes = document.getElementById('adminNotes');
+    const btnUpdateStatus = document.getElementById('btnUpdateStatus');
+    const btnSaveNotes = document.getElementById('btnSaveNotes');
+    const btnDeleteIncident = document.getElementById('btnDeleteIncident');
+
+    // Show/hide admin panel
+    function showAdminPanel() {
+      adminPanel.classList.add('visible');
+      
+      // Center the panel if it's the first time opening
+      if (!adminPanel.dataset.initialized) {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const panelWidth = 380; // Fixed width
+        const panelHeight = 400; // Minimum height
+        
+        // Center in viewport with bounds checking
+        const centerX = Math.max(20, Math.min((viewportWidth - panelWidth) / 2, viewportWidth - panelWidth - 20));
+        const centerY = Math.max(20, Math.min((viewportHeight - panelHeight) / 2, viewportHeight - panelHeight - 20));
+        
+        adminPanel.style.left = `${centerX}px`;
+        adminPanel.style.top = `${centerY}px`;
+        adminPanel.style.right = 'auto';
+        adminPanel.dataset.initialized = 'true';
+      }
+      
+      // Load incidents when panel opens
+      loadIncidentsList();
+    }
+
+    function hideAdminPanel() {
+      adminPanel.classList.remove('visible');
+      selectedIncidentId = null;
+    }
+
+    // Load incidents list
+    function loadIncidentsList(filter = '') {
+      const container = document.getElementById('incidentsContainer');
+      container.innerHTML = '<div class="loadingMessage">Зареждане на инциденти...</div>';
+      
+      fetch(`${API_BASE}/incidents${filter ? `?status=${filter}` : ''}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Грешка при зареждане на инциденти');
+          return res.json();
+        })
+        .then(incidents => {
+          renderIncidentsList(incidents);
+        })
+        .catch(err => {
+          console.error('Error loading incidents:', err);
+          container.innerHTML = '<div class="loadingMessage">Грешка при зареждане на инциденти</div>';
+          showToast('Грешка при зареждане на инциденти', true);
+        });
+    }
+
+    // Render incidents list
+    function renderIncidentsList(incidents) {
+      const container = document.getElementById('incidentsContainer');
+      
+      if (incidents.length === 0) {
+        container.innerHTML = '<div class="loadingMessage">Няма намерени инциденти</div>';
+        return;
+      }
+      
+      const statusMap = {
+        wounded: 'Ранено',
+        deceased: 'Умряло',
+        investigating: 'Разследва се',
+        treated: 'Лекувано',
+        released: 'Освободено',
+        verified: 'Потвърдено',
+        archived: 'Архивирано'
+      };
+      
+      const statusColors = {
+        wounded: '#fbbf24',
+        deceased: '#ef4444',
+        investigating: '#f59e0b',
+        treated: '#3b82f6',
+        released: '#10b981',
+        verified: '#8b5cf6',
+        archived: '#6b7280'
+      };
+      
+      container.innerHTML = incidents.map(incident => {
+        // Show current user's name if they reported this incident
+        const displayName = (incident.reporter_email === user.email) ? 
+          `${user.email} (Вие)` : 
+          (incident.reporter_email || 'Анонимен');
+        
+        return `
+        <div class="incidentItem" onclick="showIncidentDetails(${incident.id})">
+          <div class="incidentItemHeader">
+            <div class="incidentItemTitle">#${incident.id} - ${incident.species || 'Непознато'}</div>
+            <div class="incidentItemStatus" style="background: ${statusColors[incident.status]}; color: white;">
+              ${statusMap[incident.status] || incident.status}
+            </div>
+          </div>
+          <div class="incidentItemMeta">
+            <span><i class="fas fa-calendar"></i> ${new Date(incident.created_at).toLocaleDateString('bg-BG')}</span>
+            <span><i class="fas fa-user"></i> ${displayName}</span>
+            ${incident.resolved_at ? `<span><i class="fas fa-check"></i> ${new Date(incident.resolved_at).toLocaleDateString('bg-BG')}</span>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    }
+
+    // Show incident details
+    function showIncidentDetails(incidentId) {
+      selectedIncidentId = incidentId;
+      
+      // Hide list view, show details view
+      document.getElementById('incidentsList').style.display = 'none';
+      document.getElementById('incidentDetailsView').style.display = 'block';
+      
+      loadIncidentDetails(incidentId);
+    }
+
+    // Back to list
+    function backToList() {
+      // Hide details view, show list view
+      document.getElementById('incidentDetailsView').style.display = 'none';
+      document.getElementById('incidentsList').style.display = 'block';
+      selectedIncidentId = null;
+    }
+
+    // Load incident details
+    function loadIncidentDetails(incidentId) {
+      selectedIncidentId = incidentId;
+      
+      incidentDetails.innerHTML = `
+        <h4>Инцидент детайли</h4>
+        <div class="detailLoading">Зареждане...</div>
+      `;
+
+      fetch(`${API_BASE}/incidents/${incidentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(res => res.json())
+      .then(incident => {
+        displayIncidentDetails(incident);
+      })
+      .catch(err => {
+        console.error('Error loading incident details:', err);
+        incidentDetails.innerHTML = `
+          <h4>Инцидент детайли</h4>
+          <div class="detailError">Грешка при зареждане на детайлите</div>
+        `;
+      });
+    }
+
+    function displayIncidentDetails(incident) {
+      const statusMap = {
+        wounded: 'Ранено',
+        deceased: 'Умряло',
+        investigating: 'Разследва се',
+        treated: 'Лекувано',
+        released: 'Освободено',
+        verified: 'Потвърдено',
+        archived: 'Архивирано'
+      };
+
+      // Show current user's name if they reported this incident
+      const reporterDisplay = (incident.reporter_email === user.email) ? 
+        `${user.email} (Вие)` : 
+        (incident.reporter_email || 'Анонимен');
+
+      incidentDetails.innerHTML = `
+      <h4>Инцидент детайли #${incident.id}</h4>
+      <div class="detailItem">
+        <strong>Вид:</strong> ${incident.species || 'Непознато'}
+      </div>
+      <div class="detailItem">
+        <strong>Статус:</strong> <span class="status-${incident.status} status-clickable">${statusMap[incident.status] || incident.status}</span>
+      </div>
+      <div class="detailItem">
+        <strong>Координати:</strong> ${incident.lat.toFixed(6)}, ${incident.lng.toFixed(6)}
+      </div>
+      <div class="detailItem">
+        <strong>Докладвано от:</strong> ${reporterDisplay}
+      </div>
+      <div class="detailItem">
+        <strong>Създадено:</strong> ${new Date(incident.created_at).toLocaleString('bg-BG')}
+      </div>
+      ${incident.resolved_at ? `
+        <div class="detailItem">
+          <strong>Разрешено:</strong> ${new Date(incident.resolved_at).toLocaleString('bg-BG', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit', 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit' 
+          })}
+        </div>
+      ` : ''}
+      ${incident.resolver_email ? `
+        <div class="detailItem">
+          <strong>Обработено от:</strong> ${incident.resolver_email}
+        </div>
+      ` : ''}
+      ${incident.admin_notes ? `
+        <div class="detailItem">
+          <strong>Админ бележки:</strong><br>
+          <div class="adminNotesDisplay">${incident.admin_notes}</div>
+        </div>
+      ` : ''}
+      ${incident.photo_url ? `
+        <div class="detailItem">
+          <strong>Снимка:</strong><br>
+          <img src="http://localhost:3333${incident.photo_url}" alt="Incident photo" style="max-width: 100%; border-radius: 8px; margin-top: 0.5rem;">
+        </div>
+      ` : ''}
+      `;
+
+      statusSelect.value = incident.status;
+      adminNotes.value = incident.admin_notes || '';
+    }
+        <div class="detailItem">
+          <strong>Създадено:</strong> ${new Date(incident.created_at).toLocaleString('bg-BG')}
+        </div>
+        ${incident.resolved_at ? `
+          <div class="detailItem">
+            <strong>Разрешено:</strong> ${new Date(incident.resolved_at).toLocaleString('bg-BG', { 
+              year: 'numeric', 
+              month: '2-digit', 
+              day: '2-digit', 
+              hour: '2-digit', 
+              minute: '2-digit', 
+              second: '2-digit' 
+            })}
+          </div>
+        ` : ''}
+        ${incident.admin_notes ? `
+          <div class="detailItem">
+            <strong>Админ бележки:</strong><br>
+            <div class="adminNotesDisplay">${incident.admin_notes}</div>
+          </div>
+        ` : ''}
+        ${incident.photo_url ? `
+          <div class="detailItem">
+            <strong>Снимка:</strong><br>
+            <img src="http://localhost:3333${incident.photo_url}" alt="Incident photo" style="max-width: 100%; border-radius: 8px; margin-top: 0.5rem;">
+          </div>
+        ` : ''}
+      `;
+
+      statusSelect.value = incident.status;
+      adminNotes.value = incident.admin_notes || '';
+    }
+
+    // Event listeners
+    btnAdminPanel.addEventListener('click', showAdminPanel);
+    btnCloseAdmin.addEventListener('click', hideAdminPanel);
+    
+    // New event listeners
+    document.getElementById('btnRefreshList')?.addEventListener('click', () => {
+      const filter = document.getElementById('filterStatus').value;
+      loadIncidentsList(filter);
+    });
+    
+    document.getElementById('filterStatus')?.addEventListener('change', (e) => {
+      loadIncidentsList(e.target.value);
+    });
+    
+    document.getElementById('btnBackToList')?.addEventListener('click', backToList);
+
+    // Window controls
+    const minimizeBtn = adminPanel.querySelector('.windowControl.minimize');
+    const maximizeBtn = adminPanel.querySelector('.windowControl.maximize');
+    
+    minimizeBtn?.addEventListener('click', () => {
+      adminPanel.style.height = '60px';
+      adminPanel.style.overflow = 'hidden';
+      adminPanelContent.style.display = 'none';
+      minimizeBtn.style.background = '#10b981';
+      maximizeBtn.style.background = '#fbbf24';
+    });
+    
+    maximizeBtn?.addEventListener('click', () => {
+      adminPanel.style.height = '';
+      adminPanel.style.maxHeight = '';
+      adminPanel.style.overflow = '';
+      adminPanelContent.style.display = 'block';
+      maximizeBtn.style.background = '#fbbf24';
+      minimizeBtn.style.background = '#10b981';
+    });
+
+    // Quick status change
+    window.quickStatusChange = function(incidentId, newStatus) {
+      if (!token || !user.role === 'admin') return;
+      
+      const originalText = btnUpdateStatus.innerHTML;
+      
+      if (btnUpdateStatus) {
+        btnUpdateStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обновяване...';
+        btnUpdateStatus.disabled = true;
+      }
+      
+      fetch(`${API_BASE}/incidents/${incidentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('Грешка при обновяване на статуса');
+        
+        showToast('Статусът е обновен успешно');
+        loadIncidentDetails(incidentId);
+        fetchMyIncidents();
+        // Refresh map markers
+        if (map && markersLayer) {
+          markersLayer.clearLayers();
+          fetchAllIncidents();
+        }
+      })
+      .catch(err => {
+        console.error('Error updating status:', err);
+        showToast('Грешка при обновяване на статуса', true);
+      })
+      .finally(() => {
+        if (btnUpdateStatus) {
+          btnUpdateStatus.innerHTML = originalText;
+          btnUpdateStatus.disabled = false;
+        }
+      });
+    };
+
+    // Drag functionality
+    if (adminPanel && document.querySelector('.adminPanelHeader')) {
+      const adminPanelHeader = document.querySelector('.adminPanelHeader');
+      adminPanelHeader.addEventListener('mousedown', dragStart);
+      document.addEventListener('mousemove', drag);
+      document.addEventListener('mouseup', dragEnd);
+      
+      // Touch events for mobile
+      adminPanelHeader.addEventListener('touchstart', dragStart);
+      document.addEventListener('touchmove', drag);
+      document.addEventListener('touchend', dragEnd);
+    }
+
+    function dragStart(e) {
+      if (!adminPanel.classList.contains('visible')) return;
+      
+      isDragging = true;
+      adminPanel.classList.add('dragging');
+      
+      if (e.type === 'touchstart') {
+        initialX = e.touches[0].clientX - xOffset;
+        initialY = e.touches[0].clientY - yOffset;
+      } else {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+      }
+      
+      currentX = initialX;
+      currentY = initialY;
+    }
+
+    function drag(e) {
+      if (isDragging) {
+        e.preventDefault();
+        
+        if (e.type === 'touchmove') {
+          currentX = e.touches[0].clientX - initialX;
+          currentY = e.touches[0].clientY - initialY;
+        } else {
+          currentX = e.clientX - initialX;
+          currentY = e.clientY - initialY;
+        }
+        
+        xOffset = currentX;
+        yOffset = currentY;
+        
+        setTranslate(currentX, currentY);
+      }
+    }
+
+    function dragEnd(e) {
+      initialX = currentX;
+      initialY = currentY;
+      
+      isDragging = false;
+      adminPanel.classList.remove('dragging');
+    }
+
+    function setTranslate(xPos, yPos) {
+      // Ensure panel stays within viewport
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const panelWidth = adminPanel.offsetWidth;
+      const panelHeight = adminPanel.offsetHeight;
+      
+      // Constrain to viewport bounds
+      const maxX = viewportWidth - panelWidth;
+      const maxY = viewportHeight - panelHeight;
+      const boundedX = Math.max(0, Math.min(xPos, maxX));
+      const boundedY = Math.max(0, Math.min(yPos, maxY));
+      
+      adminPanel.style.left = `${boundedX}px`;
+      adminPanel.style.top = `${boundedY}px`;
+      adminPanel.style.right = 'auto';
+      adminPanel.style.transform = 'none';
+    }
+
+    btnUpdateStatus.addEventListener('click', async () => {
+      if (!selectedIncidentId) return;
+      
+      const newStatus = statusSelect.value;
+      const originalText = btnUpdateStatus.innerHTML;
+      
+      btnUpdateStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обновяване...';
+      btnUpdateStatus.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/incidents/${selectedIncidentId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!res.ok) throw new Error('Грешка при обновяване на статуса');
+        
+        showToast('Статусът е обновен успешно');
+        loadIncidentDetails(selectedIncidentId);
+        fetchMyIncidents();
+        // Refresh map markers
+        if (map && markersLayer) {
+          markersLayer.clearLayers();
+          fetchAllIncidents();
+        }
+      } catch (err) {
+        console.error('Error updating status:', err);
+        showToast('Грешка при обновяване на статуса', true);
+      } finally {
+        btnUpdateStatus.innerHTML = originalText;
+        btnUpdateStatus.disabled = false;
+      }
+    });
+
+    btnSaveNotes.addEventListener('click', async () => {
+      if (!selectedIncidentId) return;
+      
+      const notes = adminNotes.value.trim();
+      const originalText = btnSaveNotes.innerHTML;
+      
+      btnSaveNotes.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Запазване...';
+      btnSaveNotes.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/incidents/${selectedIncidentId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ admin_notes: notes })
+        });
+
+        if (!res.ok) throw new Error('Грешка при запазване на бележките');
+        
+        showToast('Бележките са запазени успешно');
+        loadIncidentDetails(selectedIncidentId);
+      } catch (err) {
+        console.error('Error saving notes:', err);
+        showToast('Грешка при запазване на бележките', true);
+      } finally {
+        btnSaveNotes.innerHTML = originalText;
+        btnSaveNotes.disabled = false;
+      }
+    });
+
+    btnDeleteIncident.addEventListener('click', async () => {
+      if (!selectedIncidentId) return;
+      
+      if (!confirm('Сигурни ли сте, че искате да изтриете този инцидент? Това действие е необратимо!')) {
+        return;
+      }
+
+      const originalText = btnDeleteIncident.innerHTML;
+      
+      btnDeleteIncident.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Изтриване...';
+      btnDeleteIncident.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/incidents/${selectedIncidentId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!res.ok) throw new Error('Грешка при изтриване на инцидента');
+        
+        showToast('Инцидентът е изтрит успешно');
+        hideAdminPanel();
+        fetchMyIncidents();
+        // Refresh map markers
+        if (map && markersLayer) {
+          markersLayer.clearLayers();
+          fetchAllIncidents();
+        }
+      } catch (err) {
+        console.error('Error deleting incident:', err);
+        showToast('Грешка при изтриване на инцидента', true);
+      } finally {
+        btnDeleteIncident.innerHTML = originalText;
+        btnDeleteIncident.disabled = false;
+      }
+    });
+    }
+
+    // Make functions global for onclick handlers
+    window.showIncidentDetails = showIncidentDetails;
+    window.backToList = backToList;
+    window.loadIncidentsList = loadIncidentsList;
+  }
+
+  // Init
+  console.log('Dashboard: Starting initialization...');
+  setTimeout(() => {
+    console.log('Dashboard: Calling initMap()...');
+    initMap();
+  }, 100);
+})();

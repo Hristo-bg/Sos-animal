@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Debug Test</h1>
+    <div id="debug"></div>
+    
+    <script>
+        const token = localStorage.getItem('roadguardian_token');
+        const user = JSON.parse(localStorage.getItem('roadguardian_user') || '{}');
+        
+        document.getElementById('debug').innerHTML = `
+            <p>Token exists: ${!!token}</p>
+            <p>Token: ${token}</p>
+            <p>User: ${JSON.stringify(user, null, 2)}</p>
+            <p>User role: ${user.role}</p>
+            <p>User email: ${user.email}</p>
+        `;
+        
+        // Test admin login
+        console.log('Token:', token);
+        console.log('User:', user);
+        console.log('User role:', user.role);
+    </script>
+</body>
+</html>

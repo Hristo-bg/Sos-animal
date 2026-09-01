@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+    
+    function isOrganization() {
+      return isAuthenticated() && request.auth.token.role == 'organization';
+    }
+    
+    function isReporter() {
+      return isAuthenticated() && request.auth.token.role == 'reporter';
+    }
+    
+    function isValidIncidentData(data) {
+      return data.keys().hasAll(['coordinates', 'status', 'severity', 'urgency', 'speciesType']) &&
+             data.coordinates is maps.LatLng &&
+             data.status in ['unclaimed', 'claimed', 'handled', 'verified', 'archived'] &&
+             data.severity in ['low', 'medium', 'high', 'emergency'] &&
+             data.urgency in ['dead', 'wounded', 'trapped'] &&
+             data.speciesType in ['mammal', 'reptile', 'bird', 'pet', 'other'];
+    }
+    
+    // Incident collection rules
+    match /incidents/{incidentId} {
+      // Read rules
+      allow read: if isAdmin() || isOrganization() || (isReporter() && resource.data.reporterId == request.auth.uid);
+      
+      // Create rules
+      allow create: if isAuthenticated() && 
+                   isReporter() &&
+                   isValidIncidentData(resource.data) &&
+                   resource.data.reporterId == request.auth.uid &&
+                   resource.data.handlerId == null;
+      
+      // Update rules with claim-once enforcement
+      allow update: if (isAdmin() || isOrganization()) && (
+        // Admin can update anything
+        isAdmin() ||
+        // Organization can claim unclaimed incidents
+        (isOrganization() && 
+         resource.data.status == 'unclaimed' && 
+         resource.data.handlerId == null &&
+         request.resource.data.status == 'claimed' &&
+         request.resource.data.handlerId == request.auth.uid) ||
+        // Organization can update their claimed incidents
+        (isOrganization() && 
+         resource.data.handlerId == request.auth.uid &&
+         ['claimed', 'handled'].contains(request.resource.data.status))
+      );
+      
+      // Delete rules (admin only)
+      allow delete: if isAdmin();
+    }
+    
+    // Users collection rules
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && userId == request.auth.uid;
+      allow read: if isAdmin();
+    }
+  }
+}

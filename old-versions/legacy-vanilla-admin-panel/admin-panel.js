@@ -25,7 +25,7 @@
     handled: '#10B981',
   };
 
-  const API_HOST = 'http://localhost:5050';
+  const API_HOST = 'http://localhost:3333';
 
   function escapeHtml(str) {
     return String(str ?? '')

@@ -1,0 +1,17 @@
+{
+  "name": "sos-animal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SOS Animal - unified dev orchestration (backend API, admin desk, public site)",
+  "scripts": {
+    "dev": "concurrently -n backend,admin,public -c blue,magenta,green \"npm:dev:backend\" \"npm:dev:admin\" \"npm:dev:public\"",
+    "dev:backend": "npm run start --prefix backend",
+    "dev:admin": "npm run dev --prefix admin",
+    "dev:public": "cd public && node server.js",
+    "build:admin": "npm run build --prefix admin",
+    "install:all": "npm install && npm install --prefix backend && npm install --prefix admin"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

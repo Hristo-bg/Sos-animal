@@ -22,7 +22,7 @@
   - Export функционалност
   - Heatmap визуализация
 
-### 📱 Мобилно приложение (Flutter)
+### 📱 Мобилно приложение (Flutter) 
 - `lib/` - Flutter мобилно приложение с:
   - AI Image Service (TensorFlow Lite)
   - Notification Service (FCM)
@@ -37,6 +37,14 @@
 
 ### 🛠️ Скриптове
 - `scripts/` - Mock data generator за тестване
+
+### 🖥️ Vanilla admin panel (заменен от Vite + AG Grid)
+- `legacy-vanilla-admin-panel/` - Старият vanilla JS admin panel (`admin-panel.js`, `admin-app.js`, `admin.css`, `admin-panel.css`, `admin-intelligence.css`), заменен от `admin/` (Vite + AG Grid), билднат в `public/admin-build/` и зареждан от `public/admin.html`
+
+### 🚀 Стари startup скриптове (заменени от `starter/dev.bat` + `npm run dev`)
+- `run_all.bat` - стартираше бекенда и публичния сайт ръчно; текстът му твърдеше грешен порт (5050) за бекенда, който реално слуша на 3333; не инсталираше зависимости и не стартираше admin desk-а
+- `start_sos_animal.bat` - дублираше логиката на `starter/start.bat`, но отваряше бекенда и публичния сайт директно вместо през Electron; също не стартираше admin desk-а (Vite)
+- И двата са заменени от `starter/dev.bat`, който обвива `npm run dev` (бекенд + admin Vite dev server + публичен сайт, с автоматична инсталация на зависимости при първо стартиране)
 
 ## Бележки
 
